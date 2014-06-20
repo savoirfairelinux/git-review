@@ -56,7 +56,7 @@ PYPI_URL = "http://pypi.python.org/pypi/git-review/json"
 PYPI_CACHE_TIME = 60 * 60 * 24  # 24 hours
 DEFAULTS = dict(scheme='ssh', hostname=False, port=None, project=False,
                 defaultbranch='master', defaultremote="gerrit",
-                defaultrebase="1")
+                defaultrebase="1",disablethinpush=False)
 
 _branch_name = None
 _has_color = None
@@ -543,6 +543,13 @@ def load_config_file(config_file):
     for config_key, option_name in options.items():
         if configParser.has_option('gerrit', option_name):
             config[config_key] = configParser.get('gerrit', option_name)
+    booleans = {
+        'disablethinpush': 'disablethinpush',
+    }
+    for config_key, option_name in booleans.items():
+        if configParser.has_option('gerrit', option_name):
+            config[config_key] = configParser.getboolean('gerrit', option_name)
+
     return config
 
 
@@ -1062,7 +1069,9 @@ def main():
     parser.add_argument("-F", "--force-rebase", dest="force_rebase",
                         action="store_true",
                         help="Force rebase even when not needed.")
-
+    parser.add_argument("--no-thin", dest="disablethinpush",
+                        action="store_true",
+                        help="Disable the thin optimization of git client")
     fetch = parser.add_mutually_exclusive_group()
     fetch.set_defaults(download=False, compare=False, cherrypickcommit=False,
                        cherrypickindicate=False, cherrypickonly=False)
@@ -1143,7 +1152,8 @@ def main():
                                  default=str(config['defaultrebase'])))
         parser.set_defaults(rebase=defaultrebase,
                             branch=config['defaultbranch'],
-                            remote=config['defaultremote'])
+                            remote=config['defaultremote'],
+                            disablethinpush=config['disablethinpush'])
     options = parser.parse_args()
     if no_git_dir:
         raise no_git_dir
@@ -1214,7 +1224,10 @@ def main():
     elif options.compatible:
         ref = "for"
 
-    cmd = "git push %s HEAD:refs/%s/%s" % (remote, ref, branch)
+    push_args = ""
+    if options.disablethinpush:
+        push_args += "--no-thin "
+    cmd = "git push %s%s HEAD:refs/%s/%s" % (push_args, remote, ref, branch)
     topic = options.topic or get_topic(branch)
     if topic != branch:
         cmd += "/%s" % topic

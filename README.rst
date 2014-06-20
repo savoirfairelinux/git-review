@@ -79,7 +79,7 @@ Example .gitreview file (used to upload for git-review itself)::
 Required values: host, project
 
 Optional values: port (default: 29418), defaultbranch (default: master),
-defaultremote (default: gerrit).
+defaultremote (default: gerrit), disablethinpush (default: false)
 
 **Notes**
 
